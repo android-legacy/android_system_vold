@@ -31,8 +31,8 @@ class DirectVolume : public Volume {
 public:
     static const int MAX_PARTITIONS = VOLD_MAX_PARTITIONS;
 protected:
-    const char* mMountpoint;
-    const char* mFuseMountpoint;
+    char* mMountpoint;
+    char* mFuseMountpoint;
 
     PathCollection *mPaths;
     int            mDiskMajor;

@@ -24,6 +24,7 @@
 #define LOG_TAG "DirectVolume"
 
 #include <cutils/log.h>
+#include <cutils/properties.h>
 #include <sysutils/NetlinkEvent.h>
 
 #include "DirectVolume.h"
@@ -35,6 +36,7 @@
 
 DirectVolume::DirectVolume(VolumeManager *vm, const fstab_rec* rec, int flags) :
         Volume(vm, rec, flags) {
+    char switchable[PROPERTY_VALUE_MAX];
     mPaths = new PathCollection();
     for (int i = 0; i < MAX_PARTITIONS; i++)
         mPartMinors[i] = -1;
@@ -62,6 +64,42 @@ DirectVolume::DirectVolume(VolumeManager *vm, const fstab_rec* rec, int flags) :
     mMountpoint = strdup(mount);
     snprintf(mount, PATH_MAX, "%s/%s", Volume::FUSE_DIR, rec->label);
     mFuseMountpoint = strdup(mount);
+
+    property_get("persist.sys.vold.switchexternal", switchable, "0");
+    if (!strcmp(switchable,"1")) {
+        char *first, *second = NULL;
+        char label[PATH_MAX];
+        const char *delim = ",";
+        int lblidx = strlen(Volume::FUSE_DIR) + 1;
+        bool swap = true;
+
+        property_get("ro.vold.switchablepair", switchable, "");
+
+        if (!(first = strtok(switchable, delim))) {
+            SLOGE("Mount switch requested, but no switchable mountpoints found");
+            swap = false;
+        } else if (!(second = strtok(NULL, delim))) {
+            SLOGE("Mount switch requested, but bad switchable mountpoints found");
+            swap = false;
+        }
+
+        if (swap) {
+            free(mMountpoint);
+            free(mFuseMountpoint);
+
+            if (!strcmp(mount,first)) {
+                mFuseMountpoint = strdup(second);
+                strcpy(label, second+lblidx);
+                snprintf(second, PATH_MAX, "%s/%s", Volume::MEDIA_DIR, label);
+                mMountpoint = strdup(second);
+            } else if (!strcmp(mount,second)) {
+                mFuseMountpoint = strdup(first);
+                strcpy(label, first+lblidx);
+                snprintf(first, PATH_MAX, "%s/%s", Volume::MEDIA_DIR, label);
+                mMountpoint = strdup(first);
+            }
+        }
+    }
 #endif
 
     setState(Volume::State_NoMedia);
