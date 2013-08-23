@@ -73,7 +73,7 @@ DirectVolume::DirectVolume(VolumeManager *vm, const fstab_rec* rec, int flags) :
         int lblidx = strlen(Volume::FUSE_DIR) + 1;
         bool swap = true;
 
-        property_get("ro.vold.switchablepair", switchable, "");
+        property_get("persist.sys.vold.switchablepair", switchable, "");
 
         if (!(first = strtok(switchable, delim))) {
             SLOGE("Mount switch requested, but no switchable mountpoints found");
